@@ -11,37 +11,61 @@
 
 ## Table of Contents
 
-- [Summary](#summary)
-- [Motivation](#motivation)
-  - [Goals](#goals)
-  - [Non-Goals](#non-goals)
-- [Proposal](#proposal)
-  - [Alignment with Unified Kubeflow SDK](#alignment-with-unified-kubeflow-sdk)
-  - [Architecture Overview](#architecture-overview)
-  - [User Stories](#user-stories)
-- [Design Details](#design-details)
-  - [MCP Tool Inventory](#mcp-tool-inventory)
-  - [Multi-MCP Ecosystem](#multi-mcp-ecosystem)
-  - [Tool Scalability](#tool-scalability)
-  - [Persona-Based Tool Visibility](#persona-based-tool-visibility)
-  - [Trainer Selection Logic](#trainer-selection-logic)
-  - [Extensibility: Dynamic LLM Trainer Framework](#extensibility-dynamic-llm-trainer-framework)
-  - [Pre-flight Validation](#pre-flight-validation)
-  - [Policy-Based Access Control](#policy-based-access-control)
-  - [CLI Usage](#cli-usage)
-  - [Workflow](#workflow)
-- [Security Considerations](#security-considerations)
-  - [Authentication](#authentication)
-  - [Authorization](#authorization)
-  - [Multi-Tenancy](#multi-tenancy)
-- [Risks and Mitigations](#risks-and-mitigations)
-- [Design Decisions](#design-decisions)
-- [Test Plan](#test-plan)
-- [Graduation Criteria](#graduation-criteria)
-- [Implementation Plan](#implementation-plan)
-- [Drawbacks](#drawbacks)
-- [Alternatives](#alternatives)
-- [References](#references)
+- [KEP-936: Kubeflow MCP Server - AI-Powered Training Interface](#kep-936-kubeflow-mcp-server---ai-powered-training-interface)
+  - [Table of Contents](#table-of-contents)
+  - [Summary](#summary)
+    - [Before vs After](#before-vs-after)
+  - [Motivation](#motivation)
+    - [Goals](#goals)
+    - [Non-Goals](#non-goals)
+  - [Proposal](#proposal)
+    - [Alignment with Unified Kubeflow SDK](#alignment-with-unified-kubeflow-sdk)
+    - [Architecture Overview](#architecture-overview)
+    - [User Stories](#user-stories)
+    - [Governance and Maintenance](#governance-and-maintenance)
+  - [Design Details](#design-details)
+    - [MCP Tool Inventory](#mcp-tool-inventory)
+    - [Multi-MCP Ecosystem](#multi-mcp-ecosystem)
+    - [Tool Scalability](#tool-scalability)
+    - [Persona-Based Tool Visibility](#persona-based-tool-visibility)
+    - [Trainer Selection Logic](#trainer-selection-logic)
+    - [Extensibility: Dynamic LLM Trainer Framework](#extensibility-dynamic-llm-trainer-framework)
+    - [Pre-flight Validation](#pre-flight-validation)
+    - [Policy-Based Access Control](#policy-based-access-control)
+    - [CLI Usage](#cli-usage)
+    - [Workflow](#workflow)
+  - [Security Considerations](#security-considerations)
+    - [Authentication](#authentication)
+    - [Authorization](#authorization)
+    - [Multi-Tenancy](#multi-tenancy)
+  - [Risks and Mitigations](#risks-and-mitigations)
+    - [Two-Phase Confirmation Pattern](#two-phase-confirmation-pattern)
+  - [Design Decisions](#design-decisions)
+    - [Why granular tools instead of one monolithic `train()` tool?](#why-granular-tools-instead-of-one-monolithic-train-tool)
+    - [Why SDK-wrapping instead of direct K8s API?](#why-sdk-wrapping-instead-of-direct-k8s-api)
+    - [Why standalone repo instead of inside kubeflow/sdk?](#why-standalone-repo-instead-of-inside-kubeflowsdk)
+    - [Why not HuggingFace Skills?](#why-not-huggingface-skills)
+    - [Comparative analysis with Feast MCP and Model Registry Catalog](#comparative-analysis-with-feast-mcp-and-model-registry-catalog)
+  - [Test Plan](#test-plan)
+    - [Unit Tests](#unit-tests)
+    - [Integration Tests](#integration-tests)
+    - [Tool Description Validation](#tool-description-validation)
+    - [E2E Tests](#e2e-tests)
+  - [Graduation Criteria](#graduation-criteria)
+  - [Implementation Plan](#implementation-plan)
+    - [Phase 1: Core MCP Server (TrainerClient)](#phase-1-core-mcp-server-trainerclient)
+    - [Phase 2: Pre-flight Validation](#phase-2-pre-flight-validation)
+    - [Phase 3: Policy \& Multi-MCP](#phase-3-policy--multi-mcp)
+    - [Phase 4: Advanced Features](#phase-4-advanced-features)
+    - [Phase 5: Additional Client Modules](#phase-5-additional-client-modules)
+    - [Phase 6: Future Modules](#phase-6-future-modules)
+  - [Drawbacks](#drawbacks)
+  - [Alternatives](#alternatives)
+  - [References](#references)
+    - [Core](#core)
+    - [Related Issues](#related-issues)
+    - [Related KEPs](#related-keps)
+    - [Research](#research)
 
 ---
 
@@ -171,6 +195,17 @@ AI Agent:
                        packages_to_install=["transformers", "peft"],
                        num_nodes=2, confirmed=True)
 ```
+
+### Governance and Maintenance
+
+This repo also proposes creation of new repo under Kubeflow org: `kubeflow/mcp-server` for the MCP server implementation.
+
+Below is the proposed governance and maintenance model:
+
+- **Maintainers**: [Kubeflow SDK WG](https://github.com/orgs/kubeflow/teams/kubeflow-sdk-team) and [@abhijeet-dhumal](https://github.com/abhijeet-dhumal) as primary maintainer. Based on contribution, we may onboard additional maintainers in future.
+- **Issue Triage**: Issues will be triaged by the SDK team; critical bugs will be hotfixed in the MCP server without waiting for full SDK releases
+- **Design Changes**: Major design changes will require a KEP update and community discussion, while minor adjustments can be made in response to user feedback and evolving best practices in the MCP ecosystem.
+- **Contributing**: Open to community contributions via GitHub PRs, with maintainers reviewing for quality and alignment with design principles. New contributors are mandated to open issue first to discuss proposed changes before implementation.
 
 ## Design Details
 
