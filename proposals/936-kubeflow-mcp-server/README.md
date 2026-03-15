@@ -10,6 +10,20 @@
 
 ---
 
+## Ownership
+
+This project will be owned by the **[WG ML Experience](https://github.com/kubeflow/community/tree/master/wg-ml-experience)** working group.
+
+- **Working Group:** [WG ML Experience](https://github.com/kubeflow/community/tree/master/wg-ml-experience)
+- **Primary Maintainer:** [@abhijeet-dhumal](https://github.com/abhijeet-dhumal) (Red Hat)
+- **Repository:** `kubeflow/mcp-server` (proposed)
+
+**Maintainer Onboarding:** Additional maintainers will be onboarded over time as they contribute improvements to the project. Contributors demonstrating sustained engagement and domain expertise will be nominated for maintainer roles following standard Kubeflow governance processes.
+
+**Experimental Status:** This project will initially be marked as **experimental** and not intended for production usage until graduation criteria are met and further stability statements are made by the WG ML Experience leads.
+
+---
+
 ## Table of Contents
 
 - [KEP-936: Kubeflow MCP Server - AI-Powered Training Interface](#kep-936-kubeflow-mcp-server---ai-powered-training-interface)
@@ -444,6 +458,25 @@ We investigated existing MCP efforts in the Kubeflow/ML ecosystem:
 - **Model Registry MCP Catalog** ([PR #2029](https://github.com/kubeflow/model-registry/pull/2029)) - This is a _catalog/gallery_ for discovering MCP servers, not an MCP server with model tools. It defines `McpServer`, `McpTool` entities for the UI. kubeflow-mcp would be _listed in_ this catalog as a discoverable server. No tool conflicts.
 
 - **Future Model Registry MCP tools** - If the Model Registry team builds their own MCP server with model registration/versioning tools, we'll coordinate naming (e.g., they own `register_model()`, we expose `list_registered_models()`). Our Phase 5 Hub module tools currently wrap `ModelRegistryClient`, so we're prepared to adjust scope as the ecosystem evolves.
+
+### Where should Agent Skills live?
+
+[Agent Skills](https://skills.sh/) are instruction files that guide LLMs on how to use tools effectively. For skills that depend on `kubeflow-mcp` tools, we recommend co-locating them in the same repository (`kubeflow/mcp-server`).
+
+**Rationale:**
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **Centralized** (skills in `kubeflow/mcp-server`) | Version-locked with MCP tools, single compatibility matrix, tested together | Less sub-project autonomy |
+| **Distributed** (skills in each sub-project) | Maintainer autonomy, domain expertise | Version mismatch risk - skill may reference tool/SDK feature not yet available |
+
+**Recommendation:** MCP-backed skills (those that call `kubeflow-mcp` tools) should live in `kubeflow/mcp-server` to ensure compatibility. CLI-based skills (using `kubectl`, `kustomize`, etc.) can safely live in sub-project repos since they have no SDK dependency.
+
+**Discovery:** Skills are discoverable via [skills.sh](https://skills.sh/) regardless of repository location, so both centralized and distributed skills remain searchable within the Kubeflow GitHub org.
+
+**Future repo rename:** If MCP-backed skills are added to the repository, we may rename from `kubeflow/mcp-server` to `kubeflow/ai-agent` or similar to reflect the broader scope (MCP server + skills). This would be proposed via a separate KEP or community discussion.
+
+**Scope:** Skills are not part of Phase 1-6 implementation. This decision documents the recommended placement for future skills development.
 
 ## Test Plan
 
